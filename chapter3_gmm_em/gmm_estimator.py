@@ -21,15 +21,19 @@ class GMM:
         sigma = []
         data = read_all_data('train/feats.scp')
         (centroids, labels) = vq.kmeans2(data, self.K, minit="points", iter=100)
-        clusters = [[] for i in range(self.K)]
+        # centroids: cluster center vector with 39 dim
+        # labels: per frame labels
+        #print(centroids, type(centroids))
+        #print(labels, len(labels))
+        clusters = [[] for i in range(self.K)] # K class (all training data)
         for (l,d) in zip(labels,data):
             clusters[l].append(d)
 
-        for cluster in clusters:
-            mu.append(np.mean(cluster, axis=0))
-            sigma.append(np.cov(cluster, rowvar=0))
+        for cluster in clusters: # K in K-means equal to K gmms
+            mu.append(np.mean(cluster, axis=0)) # calculate per class mu 5*39
+            sigma.append(np.cov(cluster, rowvar=0)) # 5*(39*39) row:observations
         pi = np.array([len(c)*1.0 / len(data) for c in clusters])
-        return mu , sigma , pi
+        return np.array(mu) , np.array(sigma) , np.array(pi)
     
     def gaussian(self , x , mu , sigma):
         """Calculate gaussion probability.
@@ -55,9 +59,11 @@ class GMM:
         """
 
         log_llh = 0.0
-        """
-            FINISH by YOUSELF
-        """
+        for i in range(X.shape[0]):
+            tmp = 0.0
+            for j in range(self.K):
+                tmp += self.pi[j]*self.gaussian(X[i], self.mu[j], self.sigma[j])
+            log_llh += np.log(tmp)
         return log_llh
 
     def em_estimator(self , X):
@@ -68,9 +74,30 @@ class GMM:
         """
 
         log_llh = 0.0
-        """
-            FINISH by YOUSELF
-        """
+        #gamma = [np.zeros(self.K) for i in range(X.shape[0])]
+        N = X.shape[0]
+        #print(N)
+        gamma = np.zeros((N, self.K)) # N*K
+        # step E, update gamma
+        for i in range(N):
+            prob = np.array([[self.pi[k]*self.gaussian(X[i], self.mu[k], self.sigma[k]) for k in range(self.K)]])
+            gamma[i,:] = prob / np.sum(prob)
+        #print(gamma, gamma.shape)
+        # step M
+        #mu = np.zeros((self.K, self.dim))
+        #pi = np.zeros(self.K)
+        sigma = np.zeros((self.K, self.dim, self.dim))
+        Nk = np.sum(gamma, axis=0) # 1*K
+        self.pi = Nk/N #update pi
+        for k in range(self.K):
+            self.mu[k,:] = np.dot(gamma[:,k].T, X) /Nk[k] # 39dim vector, update mu[k]
+            # print(self.mu)
+            for n in range(N):
+                sigma[k,:]+=gamma[n,k]*np.outer(X[n]-self.mu[k], X[n]-self.mu[k])
+            sigma[k,:] /= Nk[k] # update sigma[k]
+        
+        self.sigma = sigma
+        #print(self.sigma)
         log_llh = self.calc_log_likelihood(X)
 
         return log_llh
@@ -123,3 +150,11 @@ def main():
 
 if __name__ == '__main__':
     main()
+    #data = read_all_data('train/feats.scp')
+    #print(data, type(data), data.shape)
+    #gmm1=GMM(39, K=num_gaussian)
+    #print(gmm1.mu, gmm1.mu.shape)
+    #print(gmm1.sigma, gmm1.sigma.shape)
+    #print(gmm1.pi, type(gmm1.pi))
+    #print(gmm1.calc_log_likelihood(data), gmm1.calc_log_likelihood(data).shape)
+    #gmm1.em_estimator(data)
