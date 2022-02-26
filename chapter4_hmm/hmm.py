@@ -70,7 +70,7 @@ def Viterbi_algorithm(O, HMM_model):
     pi, A, B = HMM_model
     T = len(O)
     N = len(pi)
-    best_prob, best_path = 0.0, []
+    best_prob, best_path = 0.0, [0] * T
     # Begin Assignment
     delta = np.zeros((N, T))
     Psi = np.zeros((N, T))
@@ -92,15 +92,16 @@ def Viterbi_algorithm(O, HMM_model):
     best_prob = max(delta[:,T-1])
     best_cur_state = np.argmax(delta[:,T-1])
     print(best_cur_state)
-    best_path.append(best_cur_state)
+    best_path[T-1]=best_cur_state
     
     for t in range(T-2,-1,-1):
         #print(best_cur_state)
-        best_cur_state = int(Psi[int(best_cur_state)][t+1])
-        print(best_cur_state)
-        best_path.append(best_cur_state)
+        best_path[t] = int(Psi[best_path[t+1]][t+1])
+        print(best_path[t])
+        #best_path.append(best_cur_state)
     # End Assignment
-    return best_prob, best_path[::-1]
+    best_path = [val+1 for val in best_path]
+    return best_prob, best_path
 
 
 if __name__ == "__main__":
