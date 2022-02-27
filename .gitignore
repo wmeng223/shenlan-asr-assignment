@@ -1,2 +1,8 @@
 **/.DS_Store
 **/*.pyc
+*.zip
+!chapter5_gmm_hmm/compute-wer.pyc
+chapter3_gmm_em/test
+chapter3_gmm_em/train
+desktop.ini
+.vscode
